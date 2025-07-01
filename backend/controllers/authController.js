@@ -15,6 +15,32 @@ const login = async (req, res) => {
   }
 };
 
+const verifyToken = (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res
+      .status(401)
+      .json({ success: false, message: "No token provided" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Make sure JWT_SECRET is in your .env
+    return res.status(200).json({
+      success: true,
+      message: "Token is valid",
+      user: decoded, // This can include user ID, email, etc.
+    });
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: "Token is invalid or expired",
+    });
+  }
+};
+
 const signUp = async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -29,4 +55,4 @@ const signUp = async (req, res) => {
   }
 };
 
-module.exports = { login, signUp };
+module.exports = { login, signUp, verifyToken };

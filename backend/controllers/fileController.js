@@ -146,30 +146,76 @@ const getAllFiles = async (req, res) => {
       .json({ message: "Bucket name is required in query" });
   }
 
-  const bucket = getBucketByContentType(bucketName);
-
-  if (!bucket) {
-    return res
-      .status(500)
-      .json({ message: "No bucket found for this file type" });
-  }
-
   let page = parseInt(req.query.page) || 1;
   let limit = parseInt(req.query.limit) || 10;
   let skip = (page - 1) * limit;
 
   try {
-    const totalFiles = await bucket.find().count();
-    console.log(totalFiles);
+    let files = [];
+    let totalFiles = 0;
+
+    if (bucketName === "all") {
+      // Assume these are your known buckets
+      const mongoose = require("mongoose");
+      const buckets = ["image", "pdf", "doc", "other"];
+
+      for (const name of buckets) {
+        const bucket = getBucketByContentType(name);
+        if (!bucket) continue;
+        const bucketFiles = await bucket.find().toArray();
+        const filesWithUrl = bucketFiles.map((file) => ({
+          filename: file.filename,
+          contentType:
+            file.contentType || (file.metadata && file.metadata.contentType),
+          originalname: file.metadata && file.metadata.originalname,
+          uploadDate: file.uploadDate,
+          length: file.length,
+          url: `${req.protocol}://${req.get("host")}/${
+            file.filename
+          }?type=${name}`,
+        }));
+
+        files = files.concat(filesWithUrl);
+      }
+
+      // Sort all files by upload date descending (optional but good for UX)
+      files.sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
+      totalFiles = files.length;
+
+      // Apply pagination on merged files
+      const paginatedFiles = files.slice(skip, skip + limit);
+
+      if (paginatedFiles.length === 0) {
+        return res.status(404).json({ message: "No files found" });
+      }
+
+      return res.json({
+        totalFiles,
+        currentPage: page,
+        totalPages: Math.ceil(totalFiles / limit),
+        files: paginatedFiles,
+      });
+    }
+
+    // If a specific bucket is requested
+    const bucket = getBucketByContentType(bucketName);
+
+    if (!bucket) {
+      return res
+        .status(500)
+        .json({ message: "No bucket found for this file type" });
+    }
+
+    totalFiles = await bucket.s._filesCollection.countDocuments({});
+
     const filesCursor = bucket.find().skip(skip).limit(limit);
+    const filesInBucket = await filesCursor.toArray();
 
-    const files = await filesCursor.toArray();
-
-    if (!files || files.length === 0) {
+    if (!filesInBucket || filesInBucket.length === 0) {
       return res.status(404).json({ message: "No files found" });
     }
 
-    const filesWithUrl = files.map((file) => ({
+    const filesWithUrl = filesInBucket.map((file) => ({
       filename: file.filename,
       contentType:
         file.contentType || (file.metadata && file.metadata.contentType),
@@ -221,7 +267,10 @@ const uploadMultipleFiles = (req, res) => {
     readableStream.push(null);
 
     const uploadStream = bucket.openUploadStream(filename, {
-      metadata: { contentType: file.mimetype },
+      metadata: {
+        contentType: file.mimetype,
+        originalname: file?.originalname || Date.now(),
+      },
     });
 
     readableStream.pipe(uploadStream);

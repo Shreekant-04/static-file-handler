@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors");
 
 const app = express();
 const authRoutes = require("./routes/authRoutes");
@@ -9,6 +10,7 @@ const { protect } = require("./middlewares/authMiddleware");
 
 app.use(express.json());
 app.use(morgan("dev"));
+app.use(cors());
 
 app.get("/", (req, res) => {
   res.status(200).json({ message: "Welcome to static file handler." });

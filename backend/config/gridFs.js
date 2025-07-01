@@ -19,6 +19,9 @@ const initGridFS = () => {
 // Function to get bucket based on MIME type
 const getBucketByContentType = (contentType) => {
   if (contentType.startsWith("image")) return buckets["image"];
+  if (contentType === "pdf") return buckets["pdf"];
+  if (contentType === "doc") return buckets["doc"];
+  if (contentType === "other") return buckets["other"];
   if (contentType === "application/pdf") return buckets["pdf"];
   if (
     contentType === "application/msword" ||
@@ -27,7 +30,7 @@ const getBucketByContentType = (contentType) => {
   )
     return buckets["doc"];
 
-  return buckets["other"];
+  return null;
 };
 
 module.exports = { initGridFS, getBucketByContentType };
