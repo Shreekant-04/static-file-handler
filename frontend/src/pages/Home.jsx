@@ -1,10 +1,28 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { toast, ToastContainer } from "react-toastify";
 import ImageGallery from "./ImageGallery";
 import Navbar from "../components/Navbar";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchFiles } from "../redux/slices/uploaderSlice";
 
 const imageData = [
+  {
+    filename: "c7285d1996f6b6e7c37dfda1b0c6cef9.jpg",
+    contentType: "image/jpeg",
+    originalname: "WIN_20250603_21_49_58_Pro.jpg",
+    uploadDate: "2025-07-01T15:34:35.610Z",
+    length: 263065,
+    url: "http://localhost:5001/c7285d1996f6b6e7c37dfda1b0c6cef9.jpg?type=image",
+  },
+  {
+    filename: "0e345f0d6e5f10b0dfc2f1410a18298c.jpg",
+    contentType: "image/jpeg",
+    originalname: "WIN_20250603_21_50_39_Pro.jpg",
+    uploadDate: "2025-07-01T15:33:16.069Z",
+    length: 265235,
+    url: "http://localhost:5001/0e345f0d6e5f10b0dfc2f1410a18298c.jpg?type=image",
+  },
   {
     filename: "2118c69b3919aea9699067ff3a6f07cc.pdf",
     contentType: "application/pdf",
@@ -42,18 +60,32 @@ const imageData = [
   },
 ];
 const Home = () => {
-  const [images, setImages] = useState(imageData);
+  const [page, setPage] = useState(1);
+  const [bucketName] = useState("all");
+  const dispatch = useDispatch();
+  const { fetchedFiles = [] } = useSelector((state) => state.uploader);
   // Handle delete image
-  const handleDelete = (imageToDelete) => {
-    const updatedImages = images.filter(
-      (img) => img.filename !== imageToDelete.filename
-    );
-    setImages(updatedImages);
+  const handleDelete = (url) => {
     toast.success("Image deleted Successfully.");
   };
+
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        dispatch(fetchFiles({ page, limit: 10, bucketName }));
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    fetch();
+  }, [bucketName, dispatch, page]);
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <ImageGallery files={images} handleDelete={handleDelete} />
+    <div className="min-h-screen bg-gray-100    ">
+      <ImageGallery
+        files={fetchedFiles}
+        handleDelete={handleDelete}
+        setPage={setPage}
+      />
     </div>
   );
 };

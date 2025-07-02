@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { logout } from "../redux/slices/authSlice";
 import { useDispatch } from "react-redux";
+import { toast } from "react-toastify";
 
 const Navbar = ({ setShowUploader }) => {
   const location = useLocation();
@@ -10,6 +11,7 @@ const Navbar = ({ setShowUploader }) => {
 
   const handleLogout = () => {
     dispatch(logout());
+    toast.success("Logout sucessfully");
     navigate("/login");
   };
   return (

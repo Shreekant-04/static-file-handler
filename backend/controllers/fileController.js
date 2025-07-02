@@ -25,7 +25,10 @@ const uploadFile = (req, res) => {
   readableStream.push(null);
 
   const uploadStream = bucket.openUploadStream(filename, {
-    metadata: { contentType: req.file.mimetype },
+    metadata: {
+      contentType: req.file.mimetype,
+      originalname: req.file?.originalname || Date.now(),
+    },
   });
 
   readableStream.pipe(uploadStream);
@@ -190,9 +193,11 @@ const getAllFiles = async (req, res) => {
       }
 
       return res.json({
-        totalFiles,
-        currentPage: page,
-        totalPages: Math.ceil(totalFiles / limit),
+        pagination: {
+          totalFiles,
+          currentPage: page,
+          totalPages: Math.ceil(totalFiles / limit),
+        },
         files: paginatedFiles,
       });
     }
