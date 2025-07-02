@@ -4,8 +4,10 @@ import {
   addFiles,
   clearFiles,
   removeFile,
+  uploadMultipleFiles,
 } from "../redux/slices/uploaderSlice";
 import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-toastify";
 
 const MAX_FILES = 10;
 
@@ -13,20 +15,10 @@ const Uploader = ({ onClose }) => {
   const dispatch = useDispatch();
   const files = useSelector((state) => state.uploader.files);
   const [dragActive, setDragActive] = useState(false);
+  const [btnState, setBtnState] = useState(false);
 
   const handleFiles = (selectedFiles) => {
     const newFiles = Array.from(selectedFiles);
-    const remainingSlots = Math.max(MAX_FILES - files.length, 0);
-
-    if (remainingSlots <= 0) {
-      alert(`You can only upload a maximum of ${MAX_FILES} files.`);
-      return;
-    }
-
-    if (newFiles.length > remainingSlots) {
-      alert(`Only ${remainingSlots} file(s) can be added.`);
-    }
-
     dispatch(addFiles(newFiles));
   };
 
@@ -55,6 +47,23 @@ const Uploader = ({ onClose }) => {
     dispatch(removeFile(index));
   };
 
+  const handleUpload = async (e) => {
+    e.preventDefault();
+
+    if (files.length === 0) {
+      return toast.error("No file added");
+    }
+    try {
+      setBtnState(true);
+      await dispatch(uploadMultipleFiles()).unwrap();
+      onClose();
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setBtnState(false);
+    }
+  };
+
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -71,7 +80,7 @@ const Uploader = ({ onClose }) => {
       : "border-gray-300";
 
   return (
-    <div className="absolute inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -130,6 +139,16 @@ const Uploader = ({ onClose }) => {
           <p className="text-red-500 mt-4 font-medium ">
             Maximum {MAX_FILES} files selected.
           </p>
+        )}
+
+        {files.length > 0 && (
+          <button
+            onClick={handleUpload}
+            disabled={btnState}
+            className="absolute bottom-4 right-4 cursor-pointer bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition-all"
+          >
+            {btnState ? "Uploading..." : "Upload"}
+          </button>
         )}
       </div>
     </div>

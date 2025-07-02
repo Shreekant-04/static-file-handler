@@ -7,8 +7,8 @@ import Pagination from "../../components/Pagination";
 // Async thunk to upload files
 export const uploadMultipleFiles = createAsyncThunk(
   "files/uploadMultiple",
-  async (_, { getState, rejectWithValue }) => {
-    const { files } = getState().uploader; // Access files from state
+  async (_, { dispatch, getState, rejectWithValue }) => {
+    const { files, pagination } = getState().uploader; // Access files from state
     const formData = new FormData();
 
     files.forEach((file) => {
@@ -16,14 +16,23 @@ export const uploadMultipleFiles = createAsyncThunk(
     });
 
     try {
+      const token = localStorage.getItem("token");
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/files/upload/multiple`,
         formData,
         {
           headers: {
             "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
           },
         }
+      );
+      dispatch(
+        fetchFiles({
+          page: pagination?.currentPage || 1,
+          limit: 10,
+          bucketName: "all",
+        })
       );
       toast.success("Files uploaded successfully.");
       return response.data;
@@ -52,6 +61,7 @@ export const fetchFiles = createAsyncThunk(
           },
         }
       );
+
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || "Failed to fetch files.");
@@ -59,6 +69,39 @@ export const fetchFiles = createAsyncThunk(
   }
 );
 
+export const deleteFile = createAsyncThunk(
+  "files/deleteFile",
+  async (file, { dispatch, getState, rejectWithValue }) => {
+    const { pagination } = getState().uploader; // Access files from state
+
+    const filename = file?.filename;
+    const type = file?.contentType;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.delete(
+        `${import.meta.env.VITE_API_URL}/${filename}?type=${type}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      dispatch(
+        fetchFiles({
+          page: pagination?.currentPage || 1,
+          limit: 10,
+          bucketName: "all",
+        })
+      );
+      return { filename, message: response.data.message };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data || { message: "Something went wrong" }
+      );
+    }
+  }
+);
 // Initial state
 const initialState = {
   files: [],
@@ -88,21 +131,14 @@ const uploaderSlice = createSlice({
 
       const filesToAdd = newFiles.slice(0, remainingSlots);
       state.files = [...state.files, ...filesToAdd];
-
-      if (filesToAdd.length > 0) {
-        toast.success(`${filesToAdd.length} file(s) added successfully.`);
-      }
     },
 
     removeFile: (state, action) => {
-      const removedFile = state.files[action.payload]?.name;
       state.files = state.files.filter((_, index) => index !== action.payload);
-      toast.info(`${removedFile || "File"} removed.`);
     },
 
     clearFiles: (state) => {
       state.files = [];
-      toast.info("All files cleared.");
     },
   },
 
@@ -111,9 +147,9 @@ const uploaderSlice = createSlice({
       .addCase(uploadMultipleFiles.pending, (state) => {
         state.status = "loading";
       })
-      .addCase(uploadMultipleFiles.fulfilled, (state) => {
+      .addCase(uploadMultipleFiles.fulfilled, (state, action) => {
         state.status = "succeeded";
-        state.files = []; // Clear files after successful upload
+        state.files = [];
       })
       .addCase(uploadMultipleFiles.rejected, (state, action) => {
         state.status = "failed";
@@ -132,6 +168,16 @@ const uploaderSlice = createSlice({
       .addCase(fetchFiles.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.payload || "Failed to load files.";
+      })
+      .addCase(deleteFile.fulfilled, (state) => {
+        state.status = "succeeded";
+      })
+      .addCase(deleteFile.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload.message;
+      })
+      .addCase(deleteFile.pending, (state) => {
+        state.status = "loading";
       });
   },
 });

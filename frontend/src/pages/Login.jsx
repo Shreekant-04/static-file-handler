@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { loginUser } from "../redux/slices/authSlice";
+import { Eye, EyeOff } from "lucide-react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -51,16 +53,33 @@ const Login = () => {
           />
         </div>
 
-        <div className="mb-6">
+        <div className="mb-6 ">
           <label className="block text-gray-700 mb-2">Password</label>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter your password"
-          />
+          <div className="relative flex justify-center items-center">
+            <input
+              type={showPassword ? "text" : "password"}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter your password"
+            />
+            <div className="absolute right-4">
+              {showPassword ? (
+                <Eye
+                  onClick={() => setShowPassword(false)}
+                  size={18}
+                  className="cursor-pointer"
+                />
+              ) : (
+                <EyeOff
+                  onClick={() => setShowPassword(true)}
+                  size={18}
+                  className="cursor-pointer"
+                />
+              )}
+            </div>
+          </div>
         </div>
 
         <button

@@ -131,7 +131,7 @@ const deleteFile = async (req, res) => {
 
     await bucket.delete(fileId);
 
-    res.json({ message: "File deleted successfully" });
+    res.json({ message: "File deleted successfully", filename });
   } catch (err) {
     res
       .status(500)
@@ -220,10 +220,11 @@ const getAllFiles = async (req, res) => {
       return res.status(404).json({ message: "No files found" });
     }
 
-    const filesWithUrl = filesInBucket.map((file) => ({
+    let filesWithUrl = filesInBucket.map((file) => ({
       filename: file.filename,
       contentType:
         file.contentType || (file.metadata && file.metadata.contentType),
+      originalname: file.metadata && file.metadata.originalname,
       uploadDate: file.uploadDate,
       length: file.length,
       url: `${req.protocol}://${req.get("host")}/${
@@ -231,10 +232,16 @@ const getAllFiles = async (req, res) => {
       }?type=${bucketName}`,
     }));
 
+    filesWithUrl.sort(
+      (a, b) => new Date(b.uploadDate) - new Date(a.uploadDate)
+    );
+
     res.json({
-      totalFiles,
-      currentPage: page,
-      totalPages: Math.ceil(totalFiles / limit),
+      pagination: {
+        totalFiles,
+        currentPage: page,
+        totalPages: Math.ceil(totalFiles / limit),
+      },
       files: filesWithUrl,
     });
   } catch (error) {
@@ -251,7 +258,6 @@ const uploadMultipleFiles = (req, res) => {
   }
 
   let uploadedFiles = [];
-
   let uploadCount = 0;
 
   req.files.forEach((file) => {
@@ -274,7 +280,7 @@ const uploadMultipleFiles = (req, res) => {
     const uploadStream = bucket.openUploadStream(filename, {
       metadata: {
         contentType: file.mimetype,
-        originalname: file?.originalname || Date.now(),
+        originalname: file.originalname || Date.now(),
       },
     });
 
@@ -285,11 +291,18 @@ const uploadMultipleFiles = (req, res) => {
         "host"
       )}/${filename}?type=${encodeURIComponent(file.mimetype)}`;
 
-      uploadedFiles.push({ filename, url });
+      uploadedFiles.push({
+        filename: uploadStream.filename,
+        contentType: file.mimetype,
+        originalname: file.originalname,
+        uploadDate: uploadStream.uploadDate || new Date(),
+        length: uploadStream.length || file.size,
+        url: url,
+      });
 
       uploadCount++;
       if (uploadCount === req.files.length) {
-        res.status(201).json({
+        return res.status(201).json({
           message: "Files uploaded successfully",
           files: uploadedFiles,
         });
@@ -297,11 +310,12 @@ const uploadMultipleFiles = (req, res) => {
     });
 
     uploadStream.on("error", (err) => {
-      res.status(500).json({ message: "Upload error", error: err.message });
+      return res
+        .status(500)
+        .json({ message: "Upload error", error: err.message });
     });
   });
 };
-
 module.exports = {
   uploadFile,
   getFile,

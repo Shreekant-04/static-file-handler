@@ -4,7 +4,7 @@ import { toast, ToastContainer } from "react-toastify";
 import ImageGallery from "./ImageGallery";
 import Navbar from "../components/Navbar";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchFiles } from "../redux/slices/uploaderSlice";
+import { deleteFile, fetchFiles } from "../redux/slices/uploaderSlice";
 
 const imageData = [
   {
@@ -65,8 +65,14 @@ const Home = () => {
   const dispatch = useDispatch();
   const { fetchedFiles = [] } = useSelector((state) => state.uploader);
   // Handle delete image
-  const handleDelete = (url) => {
-    toast.success("Image deleted Successfully.");
+  const handleDelete = async (file) => {
+    try {
+      await dispatch(deleteFile(file)).unwrap();
+      toast.success("Image deleted Successfully.");
+    } catch (error) {
+      toast.error("Failed to delete file");
+      console.log(error);
+    }
   };
 
   useEffect(() => {
@@ -79,12 +85,16 @@ const Home = () => {
     };
     fetch();
   }, [bucketName, dispatch, page]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [page]);
   return (
-    <div className="min-h-screen bg-gray-100    ">
+    <div className=" bg-gray-100    ">
       <ImageGallery
         files={fetchedFiles}
         handleDelete={handleDelete}
-        setPage={setPage}
+        setpage={(p) => setPage(p)}
       />
     </div>
   );
