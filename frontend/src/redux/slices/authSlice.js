@@ -8,7 +8,7 @@ export const loginUser = createAsyncThunk(
   async (credentials, { rejectWithValue }) => {
     try {
       const response = await axios.post(
-        "http://localhost:5001/api/auth/login",
+        `${import.meta.env.VITE_API_URL}/api/auth/login`,
         credentials
       );
       toast.success("Login successful!");
@@ -33,7 +33,7 @@ export const verifyToken = createAsyncThunk(
       }
 
       const response = await axios.get(
-        "http://localhost:5001/api/auth/verify-token",
+        `${import.meta.env.VITE_API_URL}/api/auth/verify-token`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
